@@ -4,7 +4,11 @@
 マンデルブロ集合が描くオシャレな幾何学模様をデスクトップにしたり、[こんな感じのyoutube動画](https://www.youtube.com/watch?v=pCpLWbHVNhk)を作ってみたりしたい、というのがモチベーションです。
 
 # マンデルブロ集合とは
-
+漸化式
+```math
+\left( \sum_{k=1}^n a_k b_k \right)^{!!2} \leq
+\left( \sum_{k=1}^n a_k^2 \right) \left( \sum_{k=1}^n b_k^2 \right)
+```
 
 # 実装① 画像生成
 
@@ -67,6 +71,53 @@ if __name__ == '__main__':
 ```
 # 実装② 動画生成
 実装①に以下の関数を追加し、mp4動画を作成しました。
+
+```Python
+import cv2
+from tqdm import tqdm
+import multiprocessing
+import mandelbrot
+
+
+def wrapper_mandelbrot(args):
+    return mandelbrot.mandelbrot(*args)
+
+
+def mandelbrot_zoom():
+    center = complex(-0.20415, 0.65252)
+    width_range = (2.0, 10E-9)  # 描画範囲の横幅
+    resolution = (960, 1280)  # 出力画像の解像度
+    max_itr = 1000  # 最大イテレーション数
+
+    fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+    video = cv2.VideoWriter('mandelbrot.mp4', fourcc, 30.0, (resolution[1], resolution[0]))
+
+    # 描画範囲の横幅を段階的に小さくして引数のlistを作成
+    args = []
+    width = width_range[0]
+    while width > width_range[1]:
+        args.append([center, width, resolution, max_itr])
+        width *= 0.99
+
+    # マルチプロセスで処理
+    pool = multiprocessing.Pool(6)
+    results = []
+    with tqdm(total=len(args)) as t:
+        for result in pool.imap(wrapper_mandelbrot, args):
+            results.append(result)
+            t.update(1)
+
+    # 動画作成
+    for r in results:
+        a = cv2.applyColorMap(r, cv2.COLORMAP_PINK)
+        video.write(a)
+    video.release()
+
+
+if __name__ == '__main__':
+    mandelbrot_zoom()
+
+```
 
 # まとめ
 
